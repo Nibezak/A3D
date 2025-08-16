@@ -27,42 +27,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electron) {
       initAnalytics();
-      const handleStartRecording = async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorderRef.current = new MediaRecorder(stream);
-        mediaRecorderRef.current.ondataavailable = (event) => {
-          audioChunksRef.current.push(event.data);
-        };
-        mediaRecorderRef.current.onstop = async () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const reader = new FileReader();
-          reader.readAsDataURL(audioBlob);
-          reader.onloadend = async () => {
-            const base64Audio = reader.result as string;
-            await window.electron.transcribeAudio(base64Audio);
-          };
-          audioChunksRef.current = [];
-        };
-        mediaRecorderRef.current.start();
-      };
-      const handleStopRecording = () => {
-        mediaRecorderRef.current?.stop();
-      };
-      ipcRenderer.on('start-audio-recording-frontend', handleStartRecording);
-      ipcRenderer.on('stop-audio-recording-frontend', handleStopRecording);
-      window.electron.onTranscriptionReceived((text: string) => {
-        console.log('Transcription received:', text);
-      });
-      return () => {
-        ipcRenderer.removeAllListeners('start-audio-recording-frontend');
-        ipcRenderer.removeAllListeners('stop-audio-recording-frontend');
-      };
     }
   }, []);
 
@@ -83,6 +50,7 @@ export default function RootLayout({
     </html>
   )
 }
+
 
 
 
