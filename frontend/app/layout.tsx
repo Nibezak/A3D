@@ -1,3 +1,4 @@
+'use client'
 import './globals.css'
 import type { Metadata } from 'next'
 import { PostHogProvider } from './components/PostHogProvider'
@@ -5,6 +6,7 @@ import { initAnalytics } from './engine/utils/external/analytics'
 import { Toaster } from 'sonner'
 import { siteConfig } from '@/siteConfig'
 console.log('layout.tsx')
+import { useEffect, useRef } from 'react'
 
 
 export const metadata: Metadata = {
@@ -23,11 +25,47 @@ export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
-}) {
-  // Initialize analytics on client side
-  if (typeof window !== 'undefined') {
-    initAnalytics();
-  }
+}) 
+{
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electron) {
+      initAnalytics();
+
+      const handleStartRecording = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        mediaRecorderRef.current.ondataavailable = (event) => {
+          audioChunksRef.current.push(event.data);
+        };
+        mediaRecorderRef.current.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = reader.result as string;
+            const result = await window.electron.transcribeAudio(base64Audio);
+            if (result.success) {
+              window.electron.onTranscriptionReceived((text) => {
+                console.log('Transcription:', text);
+              });
+            }
+          };
+          audioChunksRef.current = [];
+        };
+        mediaRecorderRef.current.start();
+      };
+
+      const handleStopRecording = () => {
+        mediaRecorderRef.current?.stop();
+      };
+
+      ipcRenderer.on('start-audio-recording-frontend', handleStartRecording);
+      ipcRenderer.on('stop-audio-recording-frontend', handleStopRecording);
+    }
+  }, []);
 
   return (
     <html lang="en" className="dark">
@@ -48,3 +86,4 @@ export default function RootLayout({
     </html>
   )
 }
+
