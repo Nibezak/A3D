@@ -2,7 +2,7 @@ import { Observer } from "../utils/Observer";
 
 export interface UserPreferences {
   falApiKey: string;
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'dark-blue';
   renderMode: "fal" | "comfyui";
 }
 
