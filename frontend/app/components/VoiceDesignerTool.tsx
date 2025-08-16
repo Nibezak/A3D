@@ -12,20 +12,14 @@ export const VoiceDesignerTool = () => {
   const [statusMessage, setStatusMessage] = useState('Click the button to start designing with your voice.');
 
   useEffect(() => {
-    const handleTranscription = (text: string) => {
-      setStatusMessage(`Processing: "${text}"`);
-      voiceAIService.processPrompt(text);
+    const handleTranscription = (data: { text: string }) => {
+      setStatusMessage(`Processing: "${data.text}"`);
     };
 
-    // Assuming the VoiceAIService will have a way to subscribe to transcription events
-    // For now, we'll use the window.electron API directly as a temporary measure
-    // This will be refactored in a later step to go through the VoiceAIService
-    if (window.electron) {
-      window.electron.onTranscriptionReceived(handleTranscription);
-    }
+    voiceAIService.events.on('transcriptionReceived', handleTranscription);
 
     return () => {
-      // Cleanup if necessary
+      voiceAIService.events.off('transcriptionReceived', handleTranscription);
     };
   }, [voiceAIService]);
 
