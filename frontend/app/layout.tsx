@@ -5,6 +5,8 @@ import { initAnalytics } from './engine/utils/external/analytics'
 import { Toaster } from 'sonner'
 import { siteConfig } from '@/siteConfig'
 console.log('layout.tsx')
+import { useEffect, useRef } from 'react';
+import { ipcRenderer } from 'electron';
 
 
 export const metadata: Metadata = {
@@ -24,16 +26,15 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Initialize analytics on client side
-  if (typeof window !== 'undefined') {
-    initAnalytics();
-  }
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electron) {
+      initAnalytics();
+    }
+  }, []);
 
   return (
     <html lang="en" className="dark">
       <head>
-        {/* Script to disable console.log in production */}
-
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
@@ -48,3 +49,7 @@ export default function RootLayout({
     </html>
   )
 }
+
+
+
+
