@@ -6,7 +6,8 @@ import { initAnalytics } from './engine/utils/external/analytics'
 import { Toaster } from 'sonner'
 import { siteConfig } from '@/siteConfig'
 console.log('layout.tsx')
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react';
+import { ipcRenderer } from 'electron';
 
 
 export const metadata: Metadata = {
@@ -25,15 +26,13 @@ export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
-}) 
-{
+}) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electron) {
       initAnalytics();
-
       const handleStartRecording = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorderRef.current = new MediaRecorder(stream);
@@ -48,30 +47,28 @@ export default function RootLayout({
             const base64Audio = reader.result as string;
             const result = await window.electron.transcribeAudio(base64Audio);
             if (result.success) {
-              window.electron.onTranscriptionReceived((text) => {
-                console.log('Transcription:', text);
-              });
+              console.log('Transcription:', result.text);
             }
           };
           audioChunksRef.current = [];
         };
         mediaRecorderRef.current.start();
       };
-
       const handleStopRecording = () => {
         mediaRecorderRef.current?.stop();
       };
-
       ipcRenderer.on('start-audio-recording-frontend', handleStartRecording);
       ipcRenderer.on('stop-audio-recording-frontend', handleStopRecording);
+      return () => {
+        ipcRenderer.removeAllListeners('start-audio-recording-frontend');
+        ipcRenderer.removeAllListeners('stop-audio-recording-frontend');
+      };
     }
   }, []);
 
   return (
     <html lang="en" className="dark">
       <head>
-        {/* Script to disable console.log in production */}
-
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
@@ -86,4 +83,5 @@ export default function RootLayout({
     </html>
   )
 }
+
 
