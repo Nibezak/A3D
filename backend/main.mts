@@ -322,6 +322,7 @@ ipcMain.handle('transcribe-audio', async (event, audioAsBase64: string) => {
       input: { audio_url: audioAsBase64 },
       logs: true,
     });
+    mainWindow?.webContents.send('transcription-received', result.text);
     return { success: true, text: result.text };
   } catch (error) {
     console.error('Error transcribing audio:', error);
