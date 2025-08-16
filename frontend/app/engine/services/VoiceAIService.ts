@@ -1,15 +1,31 @@
 import { EditorEngine } from '../EditorEngine';
 import { ObjectManager } from '../managers/ObjectManager';
 import { fal } from '@fal-ai/client';
+import { Observer } from '../utils/Observer';
+
+export interface VoiceAIServiceEvents {
+  transcriptionReceived: { text: string };
+}
 
 export class VoiceAIService {
   private engine: EditorEngine;
   private objectManager: ObjectManager;
   private isListening: boolean = false;
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  public events: Observer<VoiceAIServiceEvents>;
 
   constructor(engine: EditorEngine) {
     this.engine = engine;
     this.objectManager = engine.getObjectManager();
+    this.events = new Observer();
+
+    if (typeof window !== 'undefined' && window.electron) {
+      window.electron.onTranscriptionReceived((text: string) => {
+        this.events.emit('transcriptionReceived', { text });
+        this.processPrompt(text);
+      });
+    }
   }
 
   public startListening(): void {
@@ -17,9 +33,25 @@ export class VoiceAIService {
       console.warn('Already listening.');
       return;
     }
-    console.log('Starting to listen...');
-    window.electron.startAudioRecording();
-    this.isListening = true;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.mediaRecorder.ondataavailable = event => {
+        this.audioChunks.push(event.data);
+      };
+      this.mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64Audio = reader.result as string;
+          window.electron.transcribeAudio(base64Audio);
+        };
+        this.audioChunks = [];
+      };
+      this.mediaRecorder.start();
+      this.isListening = true;
+      console.log('Started listening...');
+    });
   }
 
   public stopListening(): void {
@@ -27,9 +59,11 @@ export class VoiceAIService {
       console.warn('Not currently listening.');
       return;
     }
-    console.log('Stopping listening...');
-    window.electron.stopAudioRecording();
-    this.isListening = false;
+    if (this.mediaRecorder) {
+      this.mediaRecorder.stop();
+      this.isListening = false;
+      console.log('Stopped listening.');
+    }
   }
 
   public async processPrompt(text: string): Promise<void> {
@@ -105,6 +139,7 @@ export class VoiceAIService {
     `;
   }
 }
+
 
 
 
