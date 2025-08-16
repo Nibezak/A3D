@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IconSettings, IconSun, IconMoon, IconEye, IconEyeOff } from '@tabler/icons-react';
 import { useEditorEngine } from '../context/EditorEngineContext';
 
@@ -14,12 +14,6 @@ const UserPrefPanel: React.FC = () => {
 
   // Show/hide API key 
   const [showApiKey, setShowApiKey] = useState(false);
-
-  // Handle theme toggle
-  const handleThemeToggle = (checked: boolean) => {
-    const newTheme = checked ? 'dark' : 'light';
-    setUserPreference('theme', newTheme);
-  };
 
   useEffect(() => {
     setApiKeyInput(userPreferences.falApiKey);
@@ -45,19 +39,21 @@ const UserPrefPanel: React.FC = () => {
 
           <div className="space-y-4">
             {/* Theme Toggle */}
-            <div className="flex justify-between items-center">
-              <Label htmlFor="theme-toggle" className="text-xs flex items-center gap-2">
-                Dark Mode
-                {userPreferences.theme === 'dark' ?
-                  <IconMoon className="h-3 w-3" /> :
-                  <IconSun className="h-3 w-3" />}
-              </Label>
-              <Switch
-                id="theme-toggle"
-                
-                checked={userPreferences.theme === 'dark'}
-                onCheckedChange={handleThemeToggle}
-              />
+            <div className="space-y-2">
+              <Label htmlFor="theme-select" className="text-xs">Theme</Label>
+              <Select
+                value={userPreferences.theme}
+                onValueChange={(value) => setUserPreference('theme', value as 'light' | 'dark' | 'dark-blue')}
+              >
+                <SelectTrigger id="theme-select" className="h-8 text-xs">
+                  <SelectValue placeholder="Select theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="dark-blue">Dark Blue</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Fal.ai API Key */}
@@ -91,3 +87,4 @@ const UserPrefPanel: React.FC = () => {
 };
 
 export default UserPrefPanel;
+
