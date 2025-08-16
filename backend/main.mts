@@ -1,5 +1,5 @@
 // electron/main.ts
-import { app, BrowserWindow, globalShortcut, ipcMain, protocol, dialog } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, protocol, dialog, systemPreferences } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 import isDev from 'electron-is-dev';
@@ -7,6 +7,7 @@ import fs from 'fs';
 import Store from 'electron-store';
 import fsPromises from 'fs/promises'; // Use promises version of fs
 import { fileURLToPath } from 'url';
+import { fal } from '@fal-ai/client';
 
 const __projectExtension = 'a3d';
 const __filename = fileURLToPath(import.meta.url);
@@ -287,4 +288,43 @@ ipcMain.handle('writeFile', async (event, filePath: string, data: ArrayBuffer) =
 ipcMain.handle('echo', (event, message) => {
   console.log('Received echo:', message);
   return `Main process received: ${message}`;
+});
+
+// Voice AI Designer Tool IPC handlers
+
+let mediaRecorder: any;
+let audioChunks: any[] = [];
+
+ipcMain.handle('start-audio-recording', async (event) => {
+  console.log('start-audio-recording');
+  const hasPermission = await systemPreferences.askForMediaAccess('microphone');
+  if (!hasPermission) {
+    return { success: false, error: 'Microphone permission denied' };
+  }
+
+  mainWindow?.webContents.send('start-audio-recording-frontend');
+  return { success: true };
+});
+
+ipcMain.handle('stop-audio-recording', async (event) => {
+  console.log('stop-audio-recording');
+  mainWindow?.webContents.send('stop-audio-recording-frontend');
+  return { success: true };
+});
+
+ipcMain.on('audio-chunk', (event, chunk) => {
+  audioChunks.push(chunk);
+});
+
+ipcMain.handle('transcribe-audio', async (event, audioAsBase64: string) => {
+  try {
+    const result: { text: string } = await fal.subscribe('fal-ai/whisper', {
+      input: { audio_url: audioAsBase64 },
+      logs: true,
+    });
+    return { success: true, text: result.text };
+  } catch (error) {
+    console.error('Error transcribing audio:', error);
+    return { success: false, error: 'Error transcribing audio' };
+  }
 });

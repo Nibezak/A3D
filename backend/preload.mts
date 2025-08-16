@@ -41,6 +41,15 @@ try {
     // File dialogs
     showOpenDialog: () => ipcRenderer.invoke('showOpenDialog'),
     showSaveDialog: (defaultName: string) => ipcRenderer.invoke('showSaveDialog', defaultName),
+
+    // Voice AI Designer Tool
+    startAudioRecording: () => ipcRenderer.invoke('start-audio-recording'),
+    stopAudioRecording: () => ipcRenderer.invoke('stop-audio-recording'),
+    transcribeAudio: (audioAsBase64: string) => ipcRenderer.invoke('transcribe-audio', audioAsBase64),
+    onTranscriptionReceived: (callback: (text: string) => void) => {
+      ipcRenderer.on('transcription-received', (event, text) => callback(text));
+    },
+
   });
 
 } catch (error) {
