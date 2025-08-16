@@ -45,10 +45,7 @@ export default function RootLayout({
           reader.readAsDataURL(audioBlob);
           reader.onloadend = async () => {
             const base64Audio = reader.result as string;
-            const result = await window.electron.transcribeAudio(base64Audio);
-            if (result.success) {
-              console.log('Transcription:', result.text);
-            }
+            await window.electron.transcribeAudio(base64Audio);
           };
           audioChunksRef.current = [];
         };
@@ -59,6 +56,9 @@ export default function RootLayout({
       };
       ipcRenderer.on('start-audio-recording-frontend', handleStartRecording);
       ipcRenderer.on('stop-audio-recording-frontend', handleStopRecording);
+      window.electron.onTranscriptionReceived((text: string) => {
+        console.log('Transcription received:', text);
+      });
       return () => {
         ipcRenderer.removeAllListeners('start-audio-recording-frontend');
         ipcRenderer.removeAllListeners('stop-audio-recording-frontend');
@@ -83,5 +83,6 @@ export default function RootLayout({
     </html>
   )
 }
+
 
 
